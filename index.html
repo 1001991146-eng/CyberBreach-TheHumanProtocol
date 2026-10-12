@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Breach: The Human Protocol | סייבר בריץ': פרוטוקול אנושי</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                            cardBorder: '#334155',
+                            cyan: '#38bdf8',
+                            purple: '#c084fc',
+                            green: '#4ade80',
+                            amber: '#fbbf24',
+                            red: '#f87171',
+                            darker: '#090d16'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Rubik', 'Assistant', 'sans-serif'],
+                        mono: ['Fira Code', 'Courier New', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Rubik:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <!-- React & React DOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Rubik', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .code-font {
+            font-family: 'Fira Code', monospace;
+            direction: ltr;
+            text-align: left;
+        }
+
+        .ltr-dir {
+            direction: ltr;
+            text-align: left;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #38bdf8;
+        }
+
+        /* Scanline Overlay Effect */
+        .scanline {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0, 0, 0, 0.25) 50%,
+                rgba(0, 0, 0, 0.25)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+
+        /* Cyber Glow utilities */
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.35);
+        }
+        .glow-green {
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.35);
+        }
+        .glow-red {
+            box-shadow: 0 0 15px rgba(248, 113, 113, 0.35);
+        }
+
+        /* Matrix BG canvas */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            opacity: 0.08;
+            pointer-events: none;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .certificate-container {
+                box-shadow: none !important;
+                border: 4px solid #0f172a !important;
+                color: #0f172a !important;
+                background: white !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-cyber-bg text-slate-100 selection:bg-cyber-cyan selection:text-slate-900">
+    <canvas id="matrix-canvas"></canvas>
+    <div id="root" class="relative z-10 min-h-screen flex flex-col"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- WEB AUDIO API SOUND SYSTEM ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playBeep(freq = 600, type = 'sine', duration = 0.08) {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e){}
+            }
+
+            playSuccess() {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    const now = this.ctx.currentTime;
+                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                        gain.gain.setValueAtTime(0.1, now + idx * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.2);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now + idx * 0.08);
+                        osc.stop(now + idx * 0.08 + 0.2);
+                    });
+                } catch(e){}
+            }
+
+            playError() {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.25);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } catch(e){}
+            }
+
+            playReboot() {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(100, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.8);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.9);
+                } catch(e){}
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        // --- GAME DATA & STAGES (10 FULL STAGES) ---
+        const GAME_STAGES = [
+            {
+                id: 1,
+                codeName: "LOG_101_AUTONOMY",
+                title: "שלב 1: ה-Commit הבלתי מורשה",
+                subtitle: "זיהוי מנוע הבחירה והאוטונומיה (Autonomy / Choice)",
+                targetDev: "אלכס (Senior Backend Dev)",
+                description: "שרת הפיתוח הראשי הוקפא לאחר שדחיפת קוד ישירה ל-main עקפה את כל בדיקות האבטחה. האם מדובר בהתקפת סייבר חיצונית, או בכשל תקשורת וצורך אנושי שנחסם?",
+                logs: [
+                    { time: "10:14:02", type: "WARN", text: "UNAUTHORIZED_PUSH: Direct commit to branch 'main' by user @alex_backend without PR approval." },
+                    { time: "10:14:03", type: "CRIT", text: "SECURITY_TRIGGER: Rule 'Require_2_Approvals' bypassed. Admin overriding token detected." },
+                    { time: "10:14:05", type: "LOCK", text: "HUMAN_FIREWALL: Layer 1 lockdown initiated. System requires Human-Protocol Patch." }
+                ],
+                gitDiff: `commit a8f9c12b9d0042 (HEAD -> main)
+Author: Alex CyberDev <alex@cyberstart.io>
+Date:   Mon Oct 12 10:14:02 2026
+
+    [HOTFIX-FORCE] Bypass pipeline approvals & deploy payment engine
+    
+- class PaymentGateway {
+-   async process() {
+-     // Pending mandatory review from Dan & Maya
+-     return await legacyApprove();
+-   }
+- }
++ class PaymentGateway {
++   async process() {
++     // EXPLICIT BYPASS: I know what I am doing!
++     return await fastTrackDirectApproval();
++   }
++ }`,
+                chatMessages: [
+                    { sender: "דן (Team Lead)", text: "אלכס, איפה PR #402? הסיכום היה שאף אחד לא מדוחף ל-main בלי לעבור דרכי ודרך מאיה.", time: "09:45", avatar: "👨‍💻", role: "ראש צוות" },
+                    { sender: "אלכס (Senior Dev)", text: "דן, נמאס לי שכל שורה של קוד שלי צריכה 10 אישורים וטפסים! אני מפתח כבר 8 שנים. תנו לי מרחב פעולה וחופש ליצור! הקוד שלי עובד מצוין.", time: "09:50", avatar: "⚡", role: "מפתח בכיר" },
+                    { sender: "מאיה (Junior Dev)", text: "אבל אלכס, הבדיקות האוטומטיות חשובות... יש סיבה שיש קוד ריוויו...", time: "09:52", avatar: "👩‍💻", role: "מפתחת ג'וניור" },
+                    { sender: "אלכס (Senior Dev)", text: "הבירוקרטיה הזאת חונקת אותי. אם אין לי עצמאות להחליט איך לפתור באגים, חבל על הזמן של כולנו.", time: "09:55", avatar: "⚡", role: "מפתח בכיר" }
+                ],
+                puzzle: {
+                    question: "על פי מודל מפג\"ש / SEL - מהו המנוע הנפשי-התנהגותי המרכזי שגרם לאלכס לעקוף את הפרוטוקול?",
+                    options: [
+                        { id: "A", text: "מנוע הבחירה והאוטונומיה - תחושת מחנק מחוסר עצמאות, צורך בשליטה וחופש פעולה מקצועי.", correct: true },
+                        { id: "B", text: "מנוע השייכות - רצון להתחבר חברתית ולהיות מקובל בצוות.", correct: false },
+                        { id: "C", text: "חוסר הבנה טכנית בהפעלת מערכת Git ופקודות Terminal.", correct: false },
+                        { id: "D", text: "רצון זדוני להשבית את שרתי החברה ולהזיק למערכת.", correct: false }
+                    ],
+                    patchQuestion: "איזה 'פרוטוקול אנושי-טכנולוגי' (Patch) יפתור את השורש האמיתי של הבעיה וימנע אירוע סייבר חוזר?",
+                    patches: [
+                        { id: "P1", text: "חסימת הרשאות מלאה לאלכס והעמדתו לדיון משמעתי.", correct: false, feedback: "חסימה נוקשה רק תגביר את התסכול ותוביל למעקפים מסוכנים יותר בעתיד (Shadow IT)." },
+                        { id: "P2", text: "הגדרת Feature Branches עצמאיות עם בדיקות CI/CD אוטומטיות מהירות + חופש ארכיטקטוני תחום ללא בירוקרטיה ידנית מיותרת.", correct: true, feedback: "מצוין! מענה לצורך באוטונומיה ובחירה, תוך שמירה על מעטפת הגנה טכנולוגית אוטומטית." },
+                        { id: "P3", text: "ביטול כל בדיקות האבטחה בחברה כדי שכולם יוכלו לדחוף קוד ל-main.", correct: false, feedback: "ביטול הבדיקות יפקיר את המערכת לפריצות סייבר קשות." }
+                    ]
+                }
+            },
+            {
+                id: 2,
+                codeName: "LOG_202_COMPETENCE",
+                title: "שלב 2: ה-Module שנמחק",
+                subtitle: "זיהוי מנוע ההצלחה והמסוגלות (Competence / Mastery)",
+                targetDev: "מאיה (Junior Developer)",
+                description: "קובץ אלגוריתם הליבה `SecurityEngine.js` נדרס ונמחק מה-Repository. מאיה המפתחת מחקה את הקוד של דן ושכתבה אותו מאפס. מה הניע אותה לצעד הקיצוני הזה?",
+                logs: [
+                    { time: "11:20:18", type: "WARN", text: "FILE_OVERWRITE: core/SecurityEngine.js replaced completely (1200 lines deleted)." },
+                    { time: "11:20:19", type: "ERR", text: "BUILD_FAILURE: Dependency missing from module export in SecurityEngine.js." },
+                    { time: "11:20:20", type: "LOCK", text: "HUMAN_FIREWALL: Layer 2 active. Unlock required by identifying Mastery & Competence driver." }
+                ],
+                gitDiff: `--- a/src/core/SecurityEngine.js
++++ b/src/core/SecurityEngine.js
+@@ -1,15 +0,0 @@
+- // Dan's Core Verification Module (Complex Legacy Code)
+- function verifyTokenDan(token) {
+-   // Senior complex logic
+-   return crypto.pbkdf2Sync(token, salt, 10000, 64, 'sha512');
+- }
++ // Maya's New Implementation
++ function verifyTokenMaya(token) {
++   // I built this from scratch! It works and I understand every line!
++   return customHashFunction(token);
++ }`,
+                chatMessages: [
+                    { sender: "דן (Team Lead)", text: "מאיה, למה דרסת את הקוד שלי ב-SecurityEngine? העבודה שלך לא עברה קומפילציה והשביתה את הסביבה.", time: "11:05", avatar: "👨‍💻", role: "ראש צוות" },
+                    { sender: "מאיה (Junior Dev)", text: "דן... בכל פעם שאני מנסה לתרום קוד, אתה אומר 'עזבי, זה מורכב מדי, אלכס או אני נעשה את זה'. אמרתם לי לעשות רק משימות עיצוב קטנות...", time: "11:10", avatar: "👩‍💻", role: "מפתחת ג'וניור" },
+                    { sender: "מאיה (Junior Dev)", text: "אם אני לא אכתוב אלגוריתם משמעותי בעצמי, אף אחד בחברה לא יחשוב שאני מבינה במחשבים! הייתי חייבת להוכיח שאני מסוגלת!", time: "11:12", avatar: "👩‍💻", role: "מפתחת ג'וניור" },
+                    { sender: "אלכס (Senior Dev)", text: "זה חסר אחריות, מאיה. הקוד של דן מוגן ומאובטח. היית צריכה לבקש עזרה.", time: "11:15", avatar: "⚡", role: "מפתח בכיר" }
+                ],
+                puzzle: {
+                    question: "על פי מודל מפג\"ש / SEL - מהו המנוע האנושי שעמד בבסיס הפעולה של מאיה?",
+                    options: [
+                        { id: "A", text: "מנוע ההצלחה והמסוגלות - הרגשת פגיעה בערך העצמי המקצועי, ורצון עז להוכיח ידע, יכולת ולהצליח.", correct: true },
+                        { id: "B", text: "רצון לפגוע בלקוחות החברה ולהאט את קצב הפיתוח.", correct: false },
+                        { id: "C", text: "מנוע הבחירה בלבד - היא סתם רצתה לעבוד בשעות הפנאי שלה.", correct: false },
+                        { id: "D", text: "עייפות טכנית מול מסך המחשב.", correct: false }
+                    ],
+                    patchQuestion: "כיצד ניישם 'תיקון פרוטוקול אנושי' שיבנה את המסוגלות של מאיה וישמור על יציבות הקוד?",
+                    patches: [
+                        { id: "P1", text: "העברת מאיה לתפקיד מנהלית מסמכים שלא דורש כתיבת קוד.", correct: false, feedback: "צעד זה ירסק לחלוטין את מנוע המסוגלות והביטחון העצמי שלה." },
+                        { id: "P2", text: "חלוקת מודולים מאתגרים באופן מובנה (Mentoring/Pair Programming) - מתן משימת פיתוח אלגוריתמי באחריותה של מאיה בליווי חניכה מקצועי מדן.", correct: true, feedback: "מדויק! שילוב של חניכה מעצימה עם הזדמנות אמיתית להצליח ולחוות מסוגלות." },
+                        { id: "P3", text: "התעלמות מהאירוע ומתן אפשרות למאיה למחוק עוד קבצים בעתיד.", correct: false, feedback: "התעלמות אינה פותרת את התסכול ולא מונעת תקלות קוד." }
+                    ]
+                }
+            },
+            {
+                id: 3,
+                codeName: "LOG_303_BELONGING_WINWIN",
+                title: "שלב 3: התנגשות Merge Conflict וגישור Win-Win",
+                subtitle: "שילוב מנוע השייכות (Belonging) ויצירת פרוטוקול Win-Win צוותי",
+                targetDev: "כל הצוות: דן, אלכס ומאיה",
+                description: "Merge Conflict ענק ב-Pull Request הראשי קופא עקב נתק תקשורתי מוחלט בצוות. אלכס ומאיה מסרבים לדבר זה עם זו, ודן מרגיש שאיבד את השייכות והחיבור לצוות. נדרשת פקודת גישור Win-Win שתפתח את השרת סופית!",
+                logs: [
+                    { time: "12:45:00", type: "CRIT", text: "MERGE_CONFLICT: Unresolvable conflict in PR #500 between @alex_backend and @maya_dev." },
+                    { time: "12:45:01", type: "WARN", text: "COMMUNICATION_BREAKDOWN: Zero commit collaboration detected in 24 hours." },
+                    { time: "12:45:02", type: "LOCK", text: "FINAL_LOCK: Human-Factor Firewall requiring Win-Win Mediation Protocol to restore server." }
+                ],
+                gitDiff: `<<<<<<< HEAD (Alex's High-Performance Branch)
+function executeCyberCheck(data) {
+  // Fast & Autonomous - No logging overhead
+  return internalFastCheck(data);
+}
+=======
+function executeCyberCheck(data) {
+  // Maya's Comprehensive Validation Module
+  validateEveryField(data);
+  return detailedAuditLog(data);
+>>>>>>> maya-competence-branch`,
+                chatMessages: [
+                    { sender: "דן (Team Lead)", text: "חברים, הצוות שלנו מתפרק. אנחנו לא מדברים, לא מקשיבים, וכל אחד מתחפר בעמדה שלו. אני מרגיש שאנחנו כבר לא צוות אחד...", time: "12:30", avatar: "👨‍💻", role: "ראש צוות" },
+                    { sender: "אלכס (Senior Dev)", text: "אם מאיה לא תוריד את הדרישות החונקות שלה לקוד שלי, אני עוזב את החברה.", time: "12:32", avatar: "⚡", role: "מפתח בכיר" },
+                    { sender: "מאיה (Junior Dev)", text: "ואם אלכס ימשיך להתעלם מהערות ה-Review שלי ולזלזל בי, אין לי מה לחפש בצוות הזה.", time: "12:35", avatar: "👩‍💻", role: "מפתחת ג'וניור" }
+                ],
+                puzzle: {
+                    question: "מהו המנוע השלישי במודל מפג\"ש הבא לידי ביטוי בדבריו של דן ובמשבר הכללי של הצוות?",
+                    options: [
+                        { id: "A", text: "מנוע השייכות והקשר (Belonging / Connection) - הצורך להרגיש חלק מקבוצה תומכת, מוערכת ומכבדת.", correct: true },
+                        { id: "B", text: "צורך ברכישת ציוד מחשבים יקר יותר.", correct: false },
+                        { id: "C", text: "מנוע האוטונומיה בלבד.", correct: false },
+                        { id: "D", text: "רצון להעלות את שכר השעתי בלבד.", correct: false }
+                    ],
+                    patchQuestion: "גבש נסח גישור הנדסי בשיטת Win-Win (המייצר מענה לכולם: אוטונומיה לאלכס, מסוגלות למאיה ושייכות לדן):",
+                    patches: [
+                        { id: "P1", text: "קבלת הגרסה של אלכס במלואה והתעלמות ממאיה כדי לסיים מהר.", correct: false, feedback: "זהו פתרון Win-Lose הפוגע קשות במסוגלות של מאיה ובשייכות הצוותית." },
+                        { id: "P2", text: "איחוד כוחות (Architecture Fusion): אלכס יוביל את ליבת הביצועים (אוטונומיה), מאיה תפתח את מודול האבטחה והבדיקות המורחב (מסוגלות), ודן ינהל סדנת רפלקציה צוותית שבועית (שייכות).", correct: true, feedback: "פנטסטי! פתרון Win-Win מלא המזין את כל שלושת המנועים: בחירה, מסוגלות ושייכות!" },
+                        { id: "P3", text: "פיטורי כל המפתחים והבאת צוות חדש מאפס.", correct: false, feedback: "צעד יקר וקיצוני שאינו פותר את בעיית הדינמיקה האנושית." }
+                    ]
+                }
+            },
+            {
+                id: 4,
+                codeName: "LOG_404_PSYCH_SAFETY",
+                title: "שלב 4: דליפת ה-API Key והפחד מלדווח",
+                subtitle: "זיהוי בטיחות פסיכולוגית (Psychological Safety) ולקיחת אחריות",
+                targetDev: "תומר (DevOps Engineer)",
+                description: "מפתח ה-DevOps תומר העלה בטעות API Key רגיש של Production לגיט ציבורי. במקום לדווח מיד לסיסטם, הוא ניסה להסוות את העקבות מחשש שיפטרו אותו, מה שהוביל לדליפת מידע פעילה.",
+                logs: [
+                    { time: "14:10:05", type: "CRIT", text: "LEAK_DETECTED: AWS_SECRET_ACCESS_KEY visible on public GitHub repository!" },
+                    { time: "14:12:00", type: "WARN", text: "FORCE_PUSH_DETECTED: User @tomer_devops attempted git rebase to wipe commit history." },
+                    { time: "14:15:22", type: "LOCK", text: "SECURITY_LOCK: AWS Credentials compromised. Incident prolonged due to delayed reporting." }
+                ],
+                gitDiff: `--- a/config/production.env
++++ b/config/production.env
+@@ -1,3 +1,3 @@
+-# AWS PRODUCTION CREDENTIALS
+-AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+-AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
++# OOPS! Pushed raw secret key directly to public repo!
++AWS_SECRET_ACCESS_KEY="AKIA_PROD_LIVE_SECRET_KEY_EXPOSED"`,
+                chatMessages: [
+                    { sender: "תומר (DevOps)", text: "אלוהים אדירים... עשיתי טעות נוראית. דחפתי את המפתח הראשי של הענן ל-GitHub הציבורי...", time: "14:00", avatar: "🛠️", role: "איש תשתיות" },
+                    { sender: "תומר (DevOps)", text: "אם ידעו שזה אני, המנכ\"ל יצרוח עלי ויעיף אותי מהחברה על המקום. אני חייב למחוק את זה בשקט ואף אחד לא ידע...", time: "14:02", avatar: "🛠️", role: "איש תשתיות" },
+                    { sender: "אלכס (Senior Dev)", text: "תומר! ההאקרים סורקים את גיטהאב כל 3 שניות! למה לא הודעת לצוות האבטחה מיד בסיגנל הראשוני?!", time: "14:15", avatar: "⚡", role: "מפתח בכיר" },
+                    { sender: "תומר (DevOps)", text: "כבר ראיתי מה עשיתם לשגיא כשהוא עשה טעות שבוע שעבר... כולכם צחקתם עליו. מרוב פחד עשיתי שטות יותר גדולה.", time: "14:18", avatar: "🛠️", role: "איש תשתיות" }
+                ],
+                puzzle: {
+                    question: "מהו הכשל הארגוני-רגשי העמוק (SEL/Organizational) שמנע מתומר לדווח על האירוע בזמן?",
+                    options: [
+                        { id: "A", text: "היעדר 'בטיחות פסיכולוגית' (Psychological Safety) - תרבות של האשמה ופחד מטעויות, שמביאה להסתרת תקלות קריטיות.", correct: true },
+                        { id: "B", text: "חוסר זיכרון של תומר לגבי סיסמת המשתמש שלו.", correct: false },
+                        { id: "C", text: "מנוע האוטונומיה היה גבוה מדי אצל תומר.", correct: false },
+                        { id: "D", text: "תומר רצה באופן אקטיבי למכור מידע למתחרים.", correct: false }
+                    ],
+                    patchQuestion: "איזה פרוטוקול אנושי-אבטחתי יבטיח דיווח מיידי על כשלים וימנע אסון סייבר בעתיד?",
+                    patches: [
+                        { id: "P1", text: "קנס כספי כבד לכל מפתח שטועה בהעלאת מפתח אבטחה.", correct: false, feedback: "ענישה רק תגדיל את הפחד ותגרום למפתחים להסתיר אירועי סייבר עוד יותר!" },
+                        { id: "P2", text: "תרבות 'Blameless Post-Mortem' (תחקיר ללא האשמה) + התקנת סורק סודות אוטומטי (GitGuardian) ב-Pre-commit hook.", correct: true, feedback: "מעולה! שילוב של בטיחות פסיכולוגית המעודדת גילוי לב עם כלי טכנולוגי למניעת הבעיה." },
+                        { id: "P3", text: "ביטול השימוש בענן ומעבר לעבודה על דפים ופתקים.", correct: false, feedback: "פתרון לא ריאלי ולא מקצועי." }
+                    ]
+                }
+            },
+            {
+                id: 5,
+                codeName: "LOG_505_EMPATHY_PHISHING",
+                title: "שלב 5: התקפת הפישינג והאמפתיה הנדרשת",
+                subtitle: "זיהוי גורמי לחץ אנושיים ותמיכה אמפתית (Empathy & Stress Response)",
+                targetDev: "שירה (UX/UI Lead)",
+                description: "שירה מעצבת הממשק לחצה על קישור פישינג מתוחכם במייל שהתחזה לסקר לקוחות דחוף. האם הפתרון הוא להגדיר אותה כ'חוליה החלשה' או להבין את גורם הלחץ הרגשי שבו הייתה שרויה?",
+                logs: [
+                    { time: "15:30:11", type: "WARN", text: "SUSPICIOUS_OUTBOUND: User @shira_ux authenticated via spoofed login page (phish-google-docs.com)." },
+                    { time: "15:30:45", type: "CRIT", text: "SESSION_HIJACK: Admin OAuth token exfiltrated. Attackers executing lateral movement." },
+                    { time: "15:31:00", type: "LOCK", text: "ISOLATION_PROTOCOL: Workstation quarantined. Human Empathy Patch required." }
+                ],
+                gitDiff: `--- a/audit/login_events.log
++++ b/audit/login_events.log
+@@ -102,3 +102,3 @@
+ [15:29:00] User: shira@cyberstart.io | IP: 192.168.1.45 | Status: OK
+-[15:30:11] User: shira@cyberstart.io | External URL: http://phish-google-docs.com/auth
++[15:30:12] ALERT: User provided domain credentials on unverified external site during extreme high stress window.`,
+                chatMessages: [
+                    { sender: "דן (Team Lead)", text: "שירה! איך נפלת בפישינג כזה אלמנטרי? היית באלף סדנאות אבטחת מידע!", time: "15:35", avatar: "👨‍💻", role: "ראש צוות" },
+                    { sender: "שירה (UX Lead)", text: "דן, אני עובדת 14 שעות ברצף בגלל ההשקה. הלקוח הראשי צעק עלי בטלפון, הייתי בלחץ אדיר וקיבלתי מייל 'דחוף מהנהלת החברה'. לא שמתי לב לכתובת המקור!", time: "15:38", avatar: "🎨", role: "מעצבת UX" },
+                    { sender: "שירה (UX Lead)", text: "במקום לתמוך בי כשאני קורסת מעומס, אתם גורמים לי להרגיש טיפשה. אני לא חוליה חלשה, אני פשוט בן אדם עייף!", time: "15:40", avatar: "🎨", role: "מעצבת UX" },
+                    { sender: "מאיה (Junior Dev)", text: "היא צודקת... גם אני כמעט לחצתי על זה כשהייתי מוצפת אתמול.", time: "15:42", avatar: "👩‍💻", role: "מפתחת ג'וניור" }
+                ],
+                puzzle: {
+                    question: "כיצד ניגש לאירוע זה מתוך נקודת מבט של אינטליגנציה רגשית (SEL) והנדסת אנוש?",
+                    options: [
+                        { id: "A", text: "הבנה שלחץ נפשי ועייפות (Cognitive Overload) פוגעים בקבלת החלטות, ודרישת תמיכה ואמפתיה במקום שיימינג.", correct: true },
+                        { id: "B", text: "האשמת שירה בחוסר מקצועיות והורדת דרגה מידית.", correct: false },
+                        { id: "C", text: "איסור מוחלט על מעצבים להשתמש במחשבים בחברה.", correct: false },
+                        { id: "D", text: "התעלמות מהפישינג והמשך עבודה כרגיל.", correct: false }
+                    ],
+                    patchQuestion: "איזה 'תיקון פרוטוקול' ישלב הגנה טכנולוגית יחד עם אמפתיה והפחתת עומס?",
+                    patches: [
+                        { id: "P1", text: "שליחת מייל אזהרה משפיל לכל עובדי החברה עם שמה של שירה.", correct: false, feedback: "צעד זה יהרוס את השייכות ויגרום לחרדה קבוצתית." },
+                        { id: "P2", text: "הטמעת אימות דו-שלבי פיזי (YubiKey/FIDO2) שמנטרל פישינג לחלוטין + ויסות עומסים ומתן הפסקות מנוחה מסודרות בצוות.", correct: true, feedback: "נפלא! טכנולוגיה חסינת-טעויות אנוש בשילוב דאגה לרווחה הנפשית של העובד." },
+                        { id: "P3", text: "חסימת הגישה למייל לכל העובדים בחברה.", correct: false, feedback: "פתרון משבית שאינו מאפשר עבודה תקינה." }
+                    ]
+                }
+            },
+            {
+                id: 6,
+                codeName: "LOG_606_BURNOUT_OVERLOAD",
+                title: "שלב 6: קריסת שרת בשל תסמונת השחיקה",
+                subtitle: "זיהוי תסמונת השחיקה (Burnout) וניהול אנרגיה וגבולות",
+                targetDev: "דן (Team Lead)",
+                description: "דן מנהל הצוות עבד 72 שעות ברציפות ללא שינה. בשעה 03:00 לפנות בוקר, מתוך עייפות קוגניטיבית חמורה, הוא הריץ פקודת `rm -rf /` על מסד הנתונים הראשי בטעות.",
+                logs: [
+                    { time: "03:14:02", type: "CRIT", text: "DATABASE_DROP: Table 'users_production' purged by admin @dan_lead." },
+                    { time: "03:14:03", type: "ERR", text: "FATAL: Primary data cluster destroyed. No auto-backup found for last 6 hours." },
+                    { time: "03:15:00", type: "LOCK", text: "HUMAN_OVERHEAT: Layer 6 Lock. Extreme emotional & physical burnout detected." }
+                ],
+                gitDiff: `--- a/scripts/maintenance.sh
++++ b/scripts/maintenance.sh
+@@ -1,4 +1,4 @@
+ # Admin Maintenance Routine
+-# Intended: rm -rf /tmp/cache/*
++# EXECUTION AT 03:14 AM BY EXHAUSTED USER:
+- rm -rf /tmp/cache/*
++ rm -rf / # FATAL TYPO DUE TO SEVERE SLEEP DEPRIVATION`,
+                chatMessages: [
+                    { sender: "דן (Team Lead)", text: "אוי לא... מה עשיתי... מחיקתי את מסד הנתונים הראשי... עיניים שלי נעצמו מול המסך...", time: "03:16", avatar: "👨‍💻", role: "ראש צוות" },
+                    { sender: "אלכס (Senior Dev)", text: "דן, אתה עובד כבר 3 ימים ברצף בלי לישון! אמרנו לך אתמול ללכת הביתה!", time: "03:20", avatar: "⚡", role: "מפתח בכיר" },
+                    { sender: "דן (Team Lead)", text: "אם אני לא אהיה פה 24/7 הכל יתרסק. אני מרגיש מרוקן לחלוטין, אין לי אוויר. הלחץ להספיק את הדד-ליין גמר אותי.", time: "03:22", avatar: "👨‍💻", role: "ראש צוות" },
+                    { sender: "מאיה (Junior Dev)", text: "דן, מנהל טוב הוא לא מנהל שלא ישן. אנחנו צריכים אותך בריא, לא שרוק.", time: "03:25", avatar: "👩‍💻", role: "מפתחת ג'וניור" }
+                ],
+                puzzle: {
+                    question: "מהו הכשל המרכזי שמציגה סיטואציה זו בראיית SEL וניהול משאבים אנושיים?",
+                    options: [
+                        { id: "A", text: "תסמונת השחיקה (Burnout) ועודף טוטאליזציה - חוסר איזון, היעדר גבולות בריאים ועייפות הפוגעת ביכולת השיפוט.", correct: true },
+                        { id: "B", text: "חוסר ניסיון של דן בניהול מערכות Linux.", correct: false },
+                        { id: "C", text: "דן לא השתמש במקלדת איכותית מספיק.", correct: false },
+                        { id: "D", text: "אלכס ומאיה גרמו לו למחוק את הנתונים בכוונה.", correct: false }
+                    ],
+                    patchQuestion: "איך מתקנים את הפרוטוקול האנושי-ניהולי כדי למנוע קריסה נוספת?",
+                    patches: [
+                        { id: "P1", text: "דרישה מדן לעבוד 80 שעות בשבוע כדי לתקן את הנזק.", correct: false, feedback: "זה יוביל לקריסה נפשית ופיזית מוחלטת של ראש הצוות." },
+                        { id: "P2", text: "הגדרת מדיניות שעות נורמטיבית, רוטציית כוננויות (On-call rotation) + מנגנון אבטחה טכנולוגי המונע הרצת פקודות הרסניות ללא אישור כפול.", correct: true, feedback: "מצוין! שמירה על רווחת העובד לצד מנגנון אבטחה טכני מונע שגיאות עייפות." },
+                        { id: "P3", text: "ביטול השימוש במסדי נתונים בחברה.", correct: false, feedback: "פתרון בלתי אפשרי במוצר תוכנה." }
+                    ]
+                }
+            },
+            {
+                id: 7,
+                codeName: "LOG_707_GENERATIONAL_CONFLICT",
+                title: "שלב 7: הקונפליקט הבין-דורי והשונות בקוד",
+                subtitle: "זיהוי קבלת שונות, ריבוי דעות וכבוד הדדי (Perspective-Taking)",
+                targetDev: "יובל (Senior Architect) וליאם (Junior Developer)",
+                description: "וויכוח יצרי סביב טכנולוגיה ישנה (Legacy) מול פריימוורק חדיש גרם לליאם לעקוף את הארכיטקטורה של יובל הוותיק. יובל נעל את המערכת בתגובה. איך מגשרים בין הניסיון לחדשנות?",
+                logs: [
+                    { time: "16:22:10", type: "WARN", text: "ARCHITECTURE_MISMATCH: Framework 'ModernJS-v18' injected without Principal Architect clearance." },
+                    { time: "16:22:45", type: "CRIT", text: "MODULE_LOCKOUT: User @yuval_arch revoked all write tokens for junior developers." },
+                    { time: "16:23:00", type: "LOCK", text: "HUMAN_FIREWALL: Layer 7 active. Generation & Perspective-taking Protocol required." }
+                ],
+                gitDiff: `<<<<<<< CURRENT ARCHITECTURE (Yuval - 15 Years Exp)
+// Robust C++ Backed Stable Engine - Proven & Battle Tested
+#include <iostream>
+bool validateUserLegacy(User u) { return u.isValid(); }
+=======
+// Modern TypeScript Microservice (Liam - Fresh Graduate)
+export const validateUserModern = (u: User): boolean => u?.isVerified ?? false;
+>>>>>>> LIAM_MODERN_BRANCH`,
+                chatMessages: [
+                    { sender: "יובל (Architect)", text: "ליאם, הילדים של היום חושבים שכל ספריה חדשה ב-GitHub היא תורת משה מסיני. המערכת הישנה שלנו מחזיקה מיליוני דולרים בביטחון כבר 10 שנים!", time: "16:05", avatar: "👨‍🦳", role: "ארכיטקט ראשי" },
+                    { sender: "ליאם (Junior Dev)", text: "יובל, אתם תפוסים על טכנולוגיות משנות ה-90! הקוד שלך איטי, מסורבל ולא מתחבר לשום API מודרני. אתה פשוט מפחד משינויים!", time: "16:10", avatar: "🧑‍💻", role: "מפתח חדש" },
+                    { sender: "יובל (Architect)", text: "עד שלא תלמד לתת כבוד לניסיון ולארכיטקטורה שנבנתה בדם, אתה לא נוגע בקוד הליבה.", time: "16:15", avatar: "👨‍🦳", role: "ארכיטקט ראשי" }
+                ],
+                puzzle: {
+                    question: "מהי המיומנות הרגשית-חברתית (SEL) החסרה בדינמיקה בין יובל לליאם?",
+                    options: [
+                        { id: "A", text: "ראיית נקודת המבט של הזולת (Perspective-Taking) וכבוד הדדי לשונות - חיבור בין הניסיון והיציבות לחדשנות ולרעננות.", correct: true },
+                        { id: "B", text: "חוסר יכולת לקרוא תיעוד ב-C++.", correct: false },
+                        { id: "C", text: "רצון של יובל לפרוש לגמלאות מוקדם.", correct: false },
+                        { id: "D", text: "צורך בהחלפת כל המחשבים בחברה.", correct: false }
+                    ],
+                    patchQuestion: "איזה פרוטוקול אנושי-ארכיטקטוני יפתור את הקונפליקט ויחזיר את הצוות לעבודה סדירה?",
+                    patches: [
+                        { id: "P1", text: "פיטורי ליאם והשארת הקוד הישן ללא שינוי לעד.", correct: false, feedback: "החברה תאבד חדשנות ויכולת להתפתח בשוק המודרני." },
+                        { id: "P2", text: "הקמת 'ועדת ארכיטקטורה משותפת': יובל יוביל את מדדי היציבות והאבטחה, וליאם יוביל פיילוט מבוקר למודול מודרני בהנחייתו (Win-Win).", correct: true, feedback: "כל הכבוד! שילוב של כבוד לניסיון לצד מקום לחדשנות ולצמיחה." },
+                        { id: "P3", text: "מחיקת כל הקוד הישן וכתיבה מאפס ביומיים.", correct: false, feedback: "מהלך מסוכן ביותר שיביא לקריסת המערכת." }
+                    ]
+                }
+            },
+            {
+                id: 8,
+                codeName: "LOG_808_SILO_TRANSPARENCY",
+                title: "שלב 8: הפריצה בעקבות תרבות ה\"סילו\" והסודות",
+                subtitle: "זיהוי שקפות, שיתוף פעולה ותקשורת פתוחה (Open Transparency)",
+                targetDev: "רוני (Security Researcher)",
+                description: "רוני חוקר האבטחה גילה פרצת אבטחה קריטית (Zero-Day) לפני שבוע, אך שמר אותה בסוד כדי לתקן אותה לבד ולזכות בבונוס יחיד. בינתיים, האקרים ניצלו את הפרצה בדיוק באותו חלון זמן.",
+                logs: [
+                    { time: "17:40:00", type: "CRIT", text: "EXPLOIT_DETECTED: Remote Code Execution via Zero-Day buffer overflow." },
+                    { time: "17:41:12", type: "WARN", text: "DISCLOSURE_DELAY: Vulnerability was logged in @roni_sec private local notes 7 days ago!" },
+                    { time: "17:42:00", type: "LOCK", text: "HUMAN_FIREWALL: Layer 8 lockdown. Transparency & Collaboration Protocol needed." }
+                ],
+                gitDiff: `--- a/docs/private_notes_roni.txt
++++ b/docs/private_notes_roni.txt
+@@ -0,0 +1,5 @@
++# PRIVATE LOCAL NOTE - DO NOT SHARE YET!
++# Found critical bug in AuthEngine on Oct 5th.
++# I will fix it myself this weekend to get the Employee of the Month bonus!
++# Do not tell Dan or Alex!
++status: UNPATCHED IN PRODUCTION`,
+                chatMessages: [
+                    { sender: "דן (Team Lead)", text: "רוני! גילינו שהתוקפים נכנסו דרך ה-Buffer Overflow ב-AuthEngine. איך לא עלינו על זה בדיקות?", time: "17:45", avatar: "👨‍💻", role: "ראש צוות" },
+                    { sender: "רוני (Security)", text: "אממ... האמת שראיתי את זה שבוע שעבר... רציתי לפתור את זה לבד ולהפתעה את כולם ברבעון הבא...", time: "17:48", avatar: "🕵️‍♂️", role: "חוקר אבטחה" },
+                    { sender: "אלכס (Senior Dev)", text: "רוני! אבטחה זה מאמץ קבוצתי! בגלל לשמור את זה בסוד 'כדי להיות גיבור', החברה ספגה פריצה!", time: "17:50", avatar: "⚡", role: "מפתח בכיר" },
+                    { sender: "רוני (Security)", text: "בחברה הזאת מתגמלים רק כוכבים יחידים ולא עבודת צוות. הרגשתי שאם אשתף, מישהו אחר ייקח לי את התיקוי.", time: "17:52", avatar: "🕵️‍♂️", role: "חוקר אבטחה" }
+                ],
+                puzzle: {
+                    question: "מהו הכשל התרבותי-ערכי בסביבת העבודה שגרם להתנהגות הסודית של רוני?",
+                    options: [
+                        { id: "A", text: "תרבות 'סילו' (Silo Culture) ותגמול אגו-צנטרי אישי במקום עידוד שיתוף מידע, שקפות ושיתוף פעולה צוותי.", correct: true },
+                        { id: "B", text: "חוסר ידע של רוני בכתיבת מסמכי Word.", correct: false },
+                        { id: "C", text: "רוני עבד בחדר ללא תאורה מספקת.", correct: false },
+                        { id: "D", text: "האקרים פרצו למחשב של רוני וגנבו את העט שלו.", correct: false }
+                    ],
+                    patchQuestion: "איזה 'תיקון פרוטוקול' ישנה את התרבות הארגונית ויבטיח שיתוף מידע מיידי?",
+                    patches: [
+                        { id: "P1", text: "איסור מוחלט על חוקרי אבטחה לבדוק קוד לבד.", correct: false, feedback: "פתרון לא מעשי שפוגע בעבודת המחקר." },
+                        { id: "P2", text: "הגדרת מדדי תגמול צוותיים (Team Recognition), שיוף ערוץ Security Vulnerability שקוף ב-Slack ומערכת Bug Bounty פנימית משותפת.", correct: true, feedback: "מעולה! העברת הדגש מ'אגו יחיד' לשיתוף פעולה ושקפות קבוצתית מעצימה." },
+                        { id: "P3", text: "פיטורי כל צוות האבטחה והעברת האחריות למנהלת החשבונות.", correct: false, feedback: "פתרון חסר אחריות שיחמיר את מצב האבטחה." }
+                    ]
+                }
+            },
+            {
+                id: 9,
+                codeName: "LOG_909_CRISIS_REGULATION",
+                title: "שלב 9: חרדת ביצוע במענה לאירוע חי",
+                subtitle: "זיהוי ויסות רגשי ומיינדפולנס תפעולי בזמן משבר (Emotional Regulation)",
+                targetDev: "גל (Incident Responder)",
+                description: "במהלך מתקפת Ransomware פעילה, גל נכנסה לפאניקה וחרדה חריפה. מתוך הצפה רגשית היא כיבתה את הנתבים הראשיים בצורה כוחנית, מה שגרם לאובדן נתונים ולסיבוך אירוע הסייבר.",
+                logs: [
+                    { time: "18:50:00", type: "CRIT", text: "RANSOMWARE_ALERT: Encryptor active on FileServer-01." },
+                    { time: "18:50:30", type: "ERR", text: "HARD_SHUTDOWN: Core switch power pulled manually without graceful unmount." },
+                    { time: "18:51:00", type: "LOCK", text: "HUMAN_FIREWALL: Layer 9 lock. Emotional Regulation & Grounding Protocol required." }
+                ],
+                gitDiff: `--- a/sys/emergency_shutdown.sh
++++ b/sys/emergency_shutdown.sh
+@@ -1,5 +1,5 @@
+ # Proper Emergency Procedure:
+-# 1. Isolate subnet
+-# 2. Snapshot memory
+-# 3. Graceful shutdown
++# EXECUTED OUT OF PANIC / EMOTIONAL OVERWHELM:
++PULLED_POWER_CABLE_PHYSICALLY() # Corrupted RAID array!`,
+                chatMessages: [
+                    { sender: "דן (Team Lead)", text: "גל! למה ניתקת את החשמל הפיזי של הנתב? המסדי נתונים הושחתו לחלוטין!", time: "18:52", avatar: "👨‍💻", role: "ראש צוות" },
+                    { sender: "גל (Responder)", text: "ראיתי את הודעת הכופר על המסך והלב שלי התחיל לדפוק על 200! לא יכלתי לנשום! חשבתי שהחברה נסגרת בגללי!", time: "18:55", avatar: "👩‍🚒", role: "מגיבת אירועים" },
+                    { sender: "גל (Responder)", text: "הייתה לי הצפה רגשית מטורפת, לא ידעתי מה לעשות אז פשוט משכתי את השטקעק... אני מצטערת...", time: "18:57", avatar: "👩‍🚒", role: "מגיבת אירועים" },
+                    { sender: "שירה (UX Lead)", text: "זה קורה לכולם כשיש פאניקה. צריך ללמוד איך לנשום ולהירגע בזמן אמת.", time: "18:59", avatar: "🎨", role: "מעצבת UX" }
+                ],
+                puzzle: {
+                    question: "מהו האלמנט הרגשי-התנהגותי (SEL) הנדרש בעת ניהול אירועי חירום וסייבר קריטיים?",
+                    options: [
+                        { id: "A", text: "ויסות רגשי (Emotional Regulation) וקרקוע (Grounding) - היכולת לזהות הצפה נפשית, להירגע ולפעול בקור רוח על פי פרוטוקול.", correct: true },
+                        { id: "B", text: "יכולת לרוץ מהר יותר בחדר השרתים.", correct: false },
+                        { id: "C", text: "התעלמות מוחלטת מרשתות תקשורת.", correct: false },
+                        { id: "D", text: "שתיית עוד שתי כוסות אספרסו מרוכז בזמן פאניקה.", correct: false }
+                    ],
+                    patchQuestion: "איך נבנה 'פרוטוקול מענה אנושי' שימנע קריסה רגשית בזמן אירוע סייבר אמת?",
+                    patches: [
+                        { id: "P1", text: "נזף בגל על הפאניקה ואיסור עליה להיכנס לחדר השרתים.", correct: false, feedback: "נזיפה רק תגביר את החרדה באירוע הבא." },
+                        { id: "P2", text: "תרגולי סימולציה תקופתיים ('Cyber Runbooks') + נוהל 'עצור, נשום, פעל' (Stop-Breathe-Check) כחלק מנהלי החירום של החברה.", correct: true, feedback: "מצוין! תרגול מייצר חוסן נפשי (Resilience) ומפחית את החרדה בזמן אמת." },
+                        { id: "P3", text: "החלפת כל העובדים ברובוטים אוטומטיים.", correct: false, feedback: "פתרון לא קיים ולא מעשי." }
+                    ]
+                }
+            },
+            {
+                id: 10,
+                codeName: "LOG_1000_HUMAN_MANIFESTO",
+                title: "שלב 10: אמנת הפרוטוקול האנושי השלם",
+                subtitle: "אינטגרציה של אבטחת סייבר, תרבות ארגונית ואמנה צוותית",
+                targetDev: "כל צוות הסטארטאפ (CyberStart Team)",
+                description: "השרת כמעט מוכן לחזרה מלאה לפעילות! כדי לפתוח את מנעול הליבה הראשי ולמנוע אירועי סייבר עתידיים, על הצוות לחתום על 'אמנת הפרוטוקול האנושי-טכנולוגי'.",
+                logs: [
+                    { time: "19:30:00", type: "INFO", text: "SYSTEM_RECOVERY: 9 out of 10 Layers decoded successfully." },
+                    { time: "19:30:05", type: "WARN", text: "FINAL_GATE: Master System Key requires signed Human-Cyber Cultural Protocol." },
+                    { time: "19:30:10", type: "LOCK", text: "MASTER_LOCK: Awaiting final integration of Choice, Competence, Belonging & Ethics." }
+                ],
+                gitDiff: `--- a/MANIFESTO.md
++++ b/MANIFESTO.md
+@@ -0,0 +1,8 @@
++# THE CYBERSTART HUMAN PROTOCOL MANIFESTO
++1. We balance Code Security with Human Empathy.
++2. We respect Autonomy, foster Competence, and nurture Belonging (מפג"ש).
++3. Mistakes are learning opportunities (Psychological Safety).
++4. We practice Win-Win Collaboration over Ego and Silos.
++5. People are not the weakest link - People are our primary defense!
++
++Status: READY_FOR_SIGNATURE`,
+                chatMessages: [
+                    { sender: "דן (Team Lead)", text: "צוות יקר, עברנו יום מטורף. הבנו שאף מערכת אבטחה לא תעזור אם נתעלם מהאנושיות שבנו.", time: "19:15", avatar: "👨‍💻", role: "ראש צוות" },
+                    { sender: "אלכס (Senior Dev)", text: "אני מבין עכשיו שהאוטונומיה שלי לא צריכה לבוא על חשבון האבטחה או התקשורת עם הצוות.", time: "19:18", avatar: "⚡", role: "מפתח בכיר" },
+                    { sender: "מאיה (Junior Dev)", text: "ואני מרגישה עכשיו שיש לי מקום להצליח, להתפתח ולהיות חלק אמיתי מהקבוצה!", time: "19:20", avatar: "👩‍💻", role: "מפתחת ג'וניור" },
+                    { sender: "שירה & תומר & גל", text: "אנחנו מוכנים לחתום על האמנה ולהחזיר את השרת לחיים! 🚀", time: "19:22", avatar: "🌟", role: "כל הצוות" }
+                ],
+                puzzle: {
+                    question: "מהו הלקח המרכזי שלמדנו מכל 10 שלבי 'הפרוטוקול האנושי בסייבר'?",
+                    options: [
+                        { id: "A", text: "הגורם האנושי אינו 'החוליה החלשה' אלא קו ההגנה הראשון - כשיש מענה לצרכים רגשיים (מפג\"ש, בטיחות פסיכולוגית, אמפתיה), הגנת הסייבר חזקה פי כמה!", correct: true },
+                        { id: "B", text: "סייבר זה רק שורות קוד וטכנולוגיה, ואין שום קשר לרגשות או לתקשורת בין בני אדם.", correct: false },
+                        { id: "C", text: "הפתרון הכי טוב לבעיות סייבר הוא לנתק את האינטרנט ולסגור את החברה.", correct: false },
+                        { id: "D", text: "מפתחים ג'וניורים לא צריכים לכתוב קוד לעולם.", correct: false }
+                    ],
+                    patchQuestion: "אשר את החתימה על 'אמנת הפרוטוקול האנושי' להפעלת שרת הליבה הראשי:",
+                    patches: [
+                        { id: "P1", text: "סרוב לחתום על האמנה והמשך עבודה בשיטות הישנות.", correct: false, feedback: "סירוב יגרום לחזרת התקלות והקריסות בשרת." },
+                        { id: "P2", text: "חתימה והטמעה מלאה של 'אמנת הפרוטוקול האנושי' - שילוב של אבטחה טכנולוגית מתקדמת עם תרבות של אמפתיה, כבוד, מסוגלות ושייכות! 🌟", correct: true, feedback: "ניצחון מושלם! שרת הליבה שוחרר לחלוטין ופועל בעוצמה מרבית!" },
+                        { id: "P3", text: "דחיית החתימה לשנה הבאה.", correct: false, feedback: "השרת יישאר נעול." }
+                    ]
+                }
+            }
+        ];
+
+        // --- MAIN APP COMPONENT ---
+        function App() {
+            const [gameState, setGameState] = useState('BRIEFING'); // BRIEFING, PLAYING, UNLOCKED_STAGE, FINAL_SUMMARY
+            const [currentStageIdx, setCurrentStageIdx] = useState(0);
+            const [activeTab, setActiveTab] = useState('logs'); // logs, chats, terminal
+            const [soundEnabled, setSoundEnabled] = useState(true);
+
+            // Puzzle Selections
+            const [selectedOption, setSelectedOption] = useState(null);
+            const [selectedPatch, setSelectedPatch] = useState(null);
+            const [questionSolved, setQuestionSolved] = useState(false);
+            const [stageCompleted, setStageCompleted] = useState(false);
+            const [feedbackMsg, setFeedbackMsg] = useState(null);
+
+            // Metrics & Analytics
+            const [score, setScore] = useState(100);
+            const [elapsedSeconds, setElapsedSeconds] = useState(0);
+            const [studentName, setStudentName] = useState("");
+            const [showNameModal, setShowNameModal] = useState(true);
+
+            const currentStage = GAME_STAGES[currentStageIdx];
+
+            // Matrix background animation
+            useEffect(() => {
+                const canvas = document.getElementById('matrix-canvas');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                let width = canvas.width = window.innerWidth;
+                let height = canvas.height = window.innerHeight;
+
+                const cols = Math.floor(width / 20) + 1;
+                const ypos = Array(cols).fill(0);
+
+                const handleResize = () => {
+                    width = canvas.width = window.innerWidth;
+                    height = canvas.height = window.innerHeight;
+                };
+                window.addEventListener('resize', handleResize);
+
+                const matrixInterval = setInterval(() => {
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.15)';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.font = '14px Fira Code';
+
+                    ypos.forEach((y, index) => {
+                        const char = String.fromCharCode(Math.floor(Math.random() * 96) + 33);
+                        const x = index * 20;
+                        ctx.fillText(char, x, y);
+                        if (y > 100 + Math.random() * 10000) ypos[index] = 0;
+                        else ypos[index] = y + 20;
+                    });
+                }, 50);
+
+                return () => {
+                    clearInterval(matrixInterval);
+                    window.removeEventListener('resize', handleResize);
+                };
+            }, []);
+
+            // Timer hook
+            useEffect(() => {
+                let timer;
+                if (gameState === 'PLAYING') {
+                    timer = setInterval(() => {
+                        setElapsedSeconds(prev => prev + 1);
+                    }, 1000);
+                }
+                return () => clearInterval(timer);
+            }, [gameState]);
+
+            const handleStartGame = () => {
+                if (!studentName.trim()) {
+                    setFeedbackMsg({ type: 'error', text: 'אנא הזן את שמך הפרטי/מלא להתחלת התרגול' });
+                    return;
+                }
+                audio.playBeep(800, 'sine', 0.1);
+                setShowNameModal(false);
+                setGameState('PLAYING');
+            };
+
+            const toggleSound = () => {
+                const newState = !soundEnabled;
+                setSoundEnabled(newState);
+                audio.enabled = newState;
+                if (newState) audio.playBeep(700, 'sine', 0.05);
+            };
+
+            const handleOptionSelect = (optId) => {
+                setSelectedOption(optId);
+                audio.playBeep(500, 'sine', 0.04);
+            };
+
+            const handleCheckQuestion = () => {
+                const correctOpt = currentStage.puzzle.options.find(o => o.correct);
+                if (selectedOption === correctOpt.id) {
+                    audio.playSuccess();
+                    setQuestionSolved(true);
+                    setFeedbackMsg({ type: 'success', text: 'זיהוי מנוע SEL נכון! כעת בחר את הפרוטוקול האנושי (Patch) המתאים.' });
+                } else {
+                    audio.playError();
+                    setScore(prev => Math.max(20, prev - 5));
+                    setFeedbackMsg({ type: 'error', text: "זיהוי לא מדויק. עיין שוב ביומני הצ'אט ובקוד כדי לזהות את הצורך האנושי העמוק." });
+                }
+            };
+
+            const handlePatchSelect = (patchId) => {
+                setSelectedPatch(patchId);
+                audio.playBeep(550, 'sine', 0.04);
+            };
+
+            const handleApplyPatch = () => {
+                const patchObj = currentStage.puzzle.patches.find(p => p.id === selectedPatch);
+                if (patchObj.correct) {
+                    audio.playSuccess();
+                    setStageCompleted(true);
+                    setFeedbackMsg({ type: 'success', text: patchObj.feedback });
+
+                    setTimeout(() => {
+                        if (currentStageIdx < GAME_STAGES.length - 1) {
+                            audio.playReboot();
+                            setCurrentStageIdx(prev => prev + 1);
+                            setSelectedOption(null);
+                            setSelectedPatch(null);
+                            setQuestionSolved(false);
+                            setStageCompleted(false);
+                            setFeedbackMsg(null);
+                            setActiveTab('logs');
+                        } else {
+                            // ALL 10 STAGES COMPLETED
+                            audio.playReboot();
+                            setGameState('FINAL_SUMMARY');
+                            if (window.confetti) {
+                                confetti({
+                                    particleCount: 150,
+                                    spread: 100,
+                                    origin: { y: 0.6 }
+                                });
+                            }
+                        }
+                    }, 2200);
+                } else {
+                    audio.playError();
+                    setScore(prev => Math.max(20, prev - 5));
+                    setFeedbackMsg({ type: 'error', text: patchObj.feedback });
+                }
+            };
+
+            const formatTime = (totalSecs) => {
+                const mins = Math.floor(totalSecs / 60);
+                const secs = totalSecs % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            return (
+                <div className="flex-1 flex flex-col max-w-7xl w-full mx-auto p-3 sm:p-6">
+                    
+                    {/* TOP HEADER */}
+                    <header className="no-print bg-cyber-card/90 backdrop-blur border border-cyber-cardBorder rounded-xl p-4 mb-4 shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/30 flex items-center justify-center text-cyber-cyan font-mono font-bold text-xl">
+                                🛡️
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold bg-gradient-to-r from-cyber-cyan via-cyber-purple to-cyber-green bg-clip-text text-transparent">
+                                    Cyber Breach: The Human Protocol
+                                </h1>
+                                <p className="text-xs text-slate-400">חממת הסייבר הלאומית | ניתוח הנדסת אנוש וגורם אנושי בסייבר (SEL / מפג"ש)</p>
+                            </div>
+                        </div>
+
+                        {/* Progress Bar & Status */}
+                        <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                            <div className="flex flex-col items-end gap-1">
+                                <div className="text-xs font-mono text-slate-300">
+                                    התקדמות פרוטוקול: <span className="text-cyber-cyan font-bold">{Math.round(((currentStageIdx + (stageCompleted ? 1 : 0)) / GAME_STAGES.length) * 100)}%</span> (שלב {currentStageIdx + 1}/{GAME_STAGES.length})
+                                </div>
+                                <div className="w-44 h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-cyber-cyan via-cyber-purple to-cyber-green transition-all duration-500" 
+                                        style={{ width: `${((currentStageIdx + (stageCompleted ? 1 : 0)) / GAME_STAGES.length) * 100}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={toggleSound}
+                                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition flex items-center gap-1.5 ${soundEnabled ? 'border-cyber-cyan text-cyber-cyan bg-cyber-cyan/10' : 'border-slate-700 text-slate-500'}`}
+                                    title="הפעל/נסה אפקטי שמע"
+                                >
+                                    {soundEnabled ? '🔊 שמע פעיל' : '🔇 שמע מנוטרל'}
+                                </button>
+                                <button 
+                                    onClick={() => window.location.reload()}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 text-slate-400 hover:text-slate-200 text-xs transition"
+                                >
+                                    🔄 איפוס
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* NAME MODAL */}
+                    {showNameModal && (
+                        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                            <div className="bg-cyber-card border border-cyber-cyan/40 rounded-2xl max-w-md w-full p-6 shadow-2xl glow-cyan text-center">
+                                <div className="w-16 h-16 bg-cyber-cyan/10 border border-cyber-cyan rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                                    🔑
+                                </div>
+                                <h2 className="text-2xl font-bold text-white mb-2">ברוך/ה הבא/ה לחממת הסייבר</h2>
+                                <p className="text-slate-300 text-sm mb-4">
+                                    התחבר/י למערכת התגובה לאירועי סייבר. הזינו את שמכם ליצירת תעודת אנליסט בסיום:
+                                </p>
+
+                                {feedbackMsg && feedbackMsg.type === 'error' && (
+                                    <div className="mb-4 p-2.5 rounded-lg bg-rose-950/80 border border-rose-500 text-rose-200 text-xs">
+                                        {feedbackMsg.text}
+                                    </div>
+                                )}
+
+                                <input 
+                                    type="text" 
+                                    placeholder="שם מלא / שם התלמיד/ה..."
+                                    value={studentName}
+                                    onChange={(e) => {
+                                        setStudentName(e.target.value);
+                                        if (feedbackMsg) setFeedbackMsg(null);
+                                    }}
+                                    className="w-full bg-slate-900 border border-slate-700 focus:border-cyber-cyan text-white p-3 rounded-xl mb-6 text-center outline-none font-semibold"
+                                />
+                                <button 
+                                    onClick={handleStartGame}
+                                    className="w-full bg-gradient-to-r from-cyber-cyan to-cyber-purple hover:opacity-90 text-slate-950 font-bold py-3 rounded-xl transition shadow-lg text-lg"
+                                >
+                                    התחל משימת חילוץ (10 שלבים) 🚀
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* BRIEFING MODAL / VIEW */}
+                    {gameState === 'BRIEFING' && !showNameModal && (
+                        <div className="bg-cyber-card border border-cyber-cardBorder rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden my-auto">
+                            <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-cyber-red via-cyber-amber to-cyber-cyan"></div>
+                            
+                            <div className="flex items-center gap-3 text-cyber-red font-mono text-xs font-bold tracking-wider mb-2">
+                                <span className="animate-pulse">🔴 CRITICAL ALERT</span>
+                                <span>|</span>
+                                <span>SYSTEM_LOCKDOWN_PROTOCOL (10 LAYERS)</span>
+                            </div>
+
+                            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-4">
+                                התראת חירום: שרת הייצור ננעל ע"י 10 שכבות "חומת אש אנושית"
+                            </h2>
+
+                            <p className="text-slate-300 text-base sm:text-lg mb-6 leading-relaxed">
+                                חברת הסטארטאפ CyberStart ספגה קריסה פתאומית בשרת הליבה. מבדיקת סייבר ראשונית מתברר כי מדובר במכלול כשלים אנושיים, תקשורתיים ורגשיים (מודל <strong className="text-cyber-purple">מפג"ש / SEL</strong>, בטיחות פסיכולוגית, עומס ושחיקה).
+                            </p>
+
+                            {/* Dev Roster Grid */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                                <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-3 flex items-center gap-2.5">
+                                    <div className="text-2xl">⚡</div>
+                                    <div>
+                                        <div className="font-bold text-white text-xs">אלכס</div>
+                                        <div className="text-[10px] text-cyber-cyan font-mono">Senior Backend</div>
+                                    </div>
+                                </div>
+                                <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-3 flex items-center gap-2.5">
+                                    <div className="text-2xl">👩‍💻</div>
+                                    <div>
+                                        <div className="font-bold text-white text-xs">מאיה</div>
+                                        <div className="text-[10px] text-cyber-purple font-mono">Junior Dev</div>
+                                    </div>
+                                </div>
+                                <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-3 flex items-center gap-2.5">
+                                    <div className="text-2xl">👨‍💻</div>
+                                    <div>
+                                        <div className="font-bold text-white text-xs">דן</div>
+                                        <div className="text-[10px] text-cyber-green font-mono">Team Lead</div>
+                                    </div>
+                                </div>
+                                <div className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-3 flex items-center gap-2.5">
+                                    <div className="text-2xl">🛠️</div>
+                                    <div>
+                                        <div className="font-bold text-white text-xs">תומר & שירה</div>
+                                        <div className="text-[10px] text-cyber-amber font-mono">DevOps & UX</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-900/90 border-r-4 border-cyber-cyan p-4 rounded-l-xl mb-8 text-sm text-slate-300">
+                                <div className="font-bold text-cyber-cyan mb-1 flex items-center gap-2">
+                                    <span>🧠</span> המשימה שלך באנליסט סייבר וגורם אנושי:
+                                </div>
+                                לפענח 10 שכבות נעילה: לזהות את הצרכים הרגשיים (בחירה, מסוגלות, שייכות), לטפל בפחד מדיווח, למנוע שחיקה, לגשר על קונפליקטים ולנסח את אמנת הפרוטוקול האנושי!
+                            </div>
+
+                            <button 
+                                onClick={() => { audio.playBeep(); setGameState('PLAYING'); }}
+                                className="w-full bg-gradient-to-r from-cyber-cyan via-cyber-purple to-cyber-green text-slate-950 font-extrabold text-lg py-4 rounded-xl shadow-lg hover:opacity-90 transition glow-cyan"
+                            >
+                                התחל בפענוח 10 שכבות השרת 💻
+                            </button>
+                        </div>
+                    )}
+
+                    {/* MAIN GAME INTERFACE */}
+                    {gameState === 'PLAYING' && (
+                        <div className="flex-1 flex flex-col gap-4">
+                            
+                            {/* STAGE HEADER BANNER */}
+                            <div className="bg-cyber-card border border-cyber-cardBorder rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                <div>
+                                    <div className="flex items-center gap-2 text-xs font-mono text-cyber-cyan">
+                                        <span>[ LAYER {currentStage.id} OF 10 ]</span>
+                                        <span>•</span>
+                                        <span className="text-cyber-purple">{currentStage.codeName}</span>
+                                    </div>
+                                    <h2 className="text-xl font-bold text-white mt-0.5">{currentStage.title}</h2>
+                                    <p className="text-xs text-slate-300">{currentStage.subtitle}</p>
+                                </div>
+
+                                <div className="flex items-center gap-3 font-mono text-xs">
+                                    <div className="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300">
+                                        ⏱️ זמן פעילות: <span className="text-cyber-cyan font-bold">{formatTime(elapsedSeconds)}</span>
+                                    </div>
+                                    <div className="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300">
+                                        ⭐ ניקוד אבטחה: <span className="text-cyber-green font-bold">{score}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* WORKSPACE CONTENT: MULTI-TAB VIEW */}
+                            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4">
+                                
+                                {/* LEFT/MAIN PANEL: TABS & ARTIFACTS (7 COLS) */}
+                                <div className="lg:col-span-7 flex flex-col bg-cyber-card border border-cyber-cardBorder rounded-xl overflow-hidden shadow-xl">
+                                    
+                                    {/* TAB NAVIGATION HEADER */}
+                                    <div className="flex border-b border-cyber-cardBorder bg-slate-900/80 p-2 gap-2 overflow-x-auto">
+                                        <button 
+                                            onClick={() => { setActiveTab('logs'); audio.playBeep(650, 'sine', 0.03); }}
+                                            className={`px-4 py-2 rounded-lg font-semibold text-xs transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'logs' ? 'bg-cyber-cyan/15 text-cyber-cyan border border-cyber-cyan/40' : 'text-slate-400 hover:text-slate-200'}`}
+                                        >
+                                            <span>📟 System Logs & Git Diff</span>
+                                        </button>
+                                        <button 
+                                            onClick={() => { setActiveTab('chats'); audio.playBeep(650, 'sine', 0.03); }}
+                                            className={`px-4 py-2 rounded-lg font-semibold text-xs transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'chats' ? 'bg-cyber-purple/15 text-cyber-purple border border-cyber-purple/40' : 'text-slate-400 hover:text-slate-200'}`}
+                                        >
+                                            <span>💬 Slack/Discord Team Chat</span>
+                                        </button>
+                                    </div>
+
+                                    {/* TAB 1: LOGS & GIT DIFF */}
+                                    {activeTab === 'logs' && (
+                                        <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto max-h-[500px]">
+                                            {/* Window Dots Header */}
+                                            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono text-xs">
+                                                <div className="flex items-center gap-2 mb-3 ltr-dir">
+                                                    <span className="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                                                    <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
+                                                    <span className="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+                                                    <span className="text-slate-500 ml-2">terminal@cyber-incident-response:~</span>
+                                                </div>
+
+                                                <div className="space-y-1 ltr-dir text-slate-300">
+                                                    {currentStage.logs.map((log, idx) => (
+                                                        <div key={idx} className="flex gap-2">
+                                                            <span className="text-slate-500">[{log.time}]</span>
+                                                            <span className={log.type === 'CRIT' ? 'text-cyber-red font-bold' : log.type === 'WARN' ? 'text-cyber-amber' : 'text-cyber-purple'}>
+                                                                [{log.type}]
+                                                            </span>
+                                                            <span>{log.text}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Git Diff Code Viewer */}
+                                            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                                                <div className="text-xs text-slate-400 font-mono mb-2 ltr-dir flex justify-between items-center border-b border-slate-800 pb-2">
+                                                    <span>📄 Git Commit / System Artifact</span>
+                                                    <span className="text-cyber-cyan">{currentStage.targetDev}</span>
+                                                </div>
+                                                <pre className="code-font text-xs text-slate-200 overflow-x-auto p-2 bg-slate-900 rounded border border-slate-800 leading-relaxed">
+                                                    {currentStage.gitDiff.split('\n').map((line, idx) => {
+                                                        let colorClass = "text-slate-300";
+                                                        if (line.startsWith('+')) colorClass = "text-emerald-400 bg-emerald-950/30";
+                                                        if (line.startsWith('-')) colorClass = "text-rose-400 bg-rose-950/30";
+                                                        if (line.startsWith('commit') || line.startsWith('Author:')) colorClass = "text-cyber-cyan font-bold";
+                                                        return <div key={idx} className={colorClass}>{line}</div>;
+                                                    })}
+                                                </pre>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* TAB 2: SLACK/DISCORD TEAM CHAT */}
+                                    {activeTab === 'chats' && (
+                                        <div className="p-4 flex-1 flex flex-col gap-3 overflow-y-auto max-h-[500px] bg-slate-900/50">
+                                            <div className="text-xs text-slate-400 border-b border-slate-800 pb-2 flex justify-between items-center">
+                                                <span>#channel: <strong className="text-white">dev-team-internal</strong></span>
+                                                <span className="text-emerald-400 text-[10px] bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">● LIVE RECOVERY FEED</span>
+                                            </div>
+
+                                            {currentStage.chatMessages.map((msg, idx) => (
+                                                <div key={idx} className="bg-slate-900 border border-slate-800 p-3 rounded-xl flex gap-3 items-start">
+                                                    <div className="text-2xl bg-slate-800 p-2 rounded-lg border border-slate-700 shrink-0">
+                                                        {msg.avatar}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-sm text-white">{msg.sender}</span>
+                                                                <span className="text-[10px] text-cyber-cyan bg-cyber-cyan/10 px-1.5 py-0.5 rounded border border-cyber-cyan/30">{msg.role}</span>
+                                                            </div>
+                                                            <span className="text-[10px] font-mono text-slate-500">{msg.time}</span>
+                                                        </div>
+                                                        <p className="text-sm text-slate-300 leading-relaxed">{msg.text}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* RIGHT PANEL: HUMAN DECRYPTION TERMINAL & PUZZLE (5 COLS) */}
+                                <div className="lg:col-span-5 flex flex-col bg-cyber-card border border-cyber-cardBorder rounded-xl p-5 shadow-xl relative">
+                                    <div className="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-4">
+                                        <h3 className="font-bold text-base text-white flex items-center gap-2">
+                                            <span>🧩</span> מסוף פענוח הגורם האנושי
+                                        </h3>
+                                        <span className="text-xs font-mono text-cyber-cyan bg-cyber-cyan/10 px-2 py-1 rounded border border-cyber-cyan/30">
+                                            SEL DECRYPTION ENGINE
+                                        </span>
+                                    </div>
+
+                                    {/* STEP 1: SEL DRIVER IDENTIFICATION */}
+                                    {!questionSolved && (
+                                        <div className="flex-1 flex flex-col justify-between gap-4">
+                                            <div>
+                                                <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-xs text-slate-300 mb-4">
+                                                    <strong>משימה ראשונה:</strong> נתח את שיחות הצ'אט ויומני המערכת. מהו הצורך הרגשי/אנושי שנפגע כאן?
+                                                </div>
+
+                                                <p className="font-semibold text-sm text-white mb-3 leading-snug">
+                                                    {currentStage.puzzle.question}
+                                                </p>
+
+                                                <div className="space-y-2.5">
+                                                    {currentStage.puzzle.options.map((opt) => (
+                                                        <button
+                                                            key={opt.id}
+                                                            onClick={() => handleOptionSelect(opt.id)}
+                                                            className={`w-full text-right p-3 rounded-xl border text-xs leading-relaxed transition flex items-start gap-2.5 ${
+                                                                selectedOption === opt.id 
+                                                                    ? 'bg-cyber-cyan/20 border-cyber-cyan text-white glow-cyan font-semibold' 
+                                                                    : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white'
+                                                            }`}
+                                                        >
+                                                            <span className="font-mono font-bold text-cyber-cyan shrink-0">{opt.id}.</span>
+                                                            <span>{opt.text}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                disabled={!selectedOption}
+                                                onClick={handleCheckQuestion}
+                                                className={`w-full py-3 rounded-xl font-bold text-sm transition shadow-lg ${
+                                                    selectedOption 
+                                                        ? 'bg-cyber-cyan text-slate-950 hover:opacity-90 cursor-pointer glow-cyan' 
+                                                        : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                אימות אבחון SEL 🔍
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* STEP 2: HUMAN PROTOCOL PATCH */}
+                                    {questionSolved && (
+                                        <div className="flex-1 flex flex-col justify-between gap-4">
+                                            <div>
+                                                <div className="bg-emerald-950/40 border border-emerald-800/60 p-3 rounded-xl text-xs text-emerald-300 mb-4 flex items-center gap-2">
+                                                    <span>✅</span> אבחון SEL אומת בהצלחה! כעת בחר את הפרוטוקול הטכנולוגי-אנושי המתאים.
+                                                </div>
+
+                                                <p className="font-semibold text-sm text-white mb-3 leading-snug">
+                                                    {currentStage.puzzle.patchQuestion}
+                                                </p>
+
+                                                <div className="space-y-2.5">
+                                                    {currentStage.puzzle.patches.map((patch) => (
+                                                        <button
+                                                            key={patch.id}
+                                                            onClick={() => handlePatchSelect(patch.id)}
+                                                            className={`w-full text-right p-3 rounded-xl border text-xs leading-relaxed transition flex items-start gap-2.5 ${
+                                                                selectedPatch === patch.id 
+                                                                    ? 'bg-cyber-purple/20 border-cyber-purple text-white glow-cyan font-semibold ring-2 ring-cyber-purple' 
+                                                                    : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white'
+                                                            }`}
+                                                        >
+                                                            <span className="font-mono font-bold text-cyber-purple shrink-0">🛠️</span>
+                                                            <span>{patch.text}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                disabled={!selectedPatch || stageCompleted}
+                                                onClick={handleApplyPatch}
+                                                className={`w-full py-3 rounded-xl font-bold text-sm transition shadow-lg ${
+                                                    selectedPatch && !stageCompleted
+                                                        ? 'bg-gradient-to-r from-cyber-purple to-cyber-cyan text-slate-950 hover:opacity-90 cursor-pointer glow-cyan' 
+                                                        : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-75'
+                                                }`}
+                                            >
+                                                {stageCompleted 
+                                                    ? 'פרוטוקול הוטמע! מעביר שלב...' 
+                                                    : !selectedPatch 
+                                                        ? '👈 בחר/י קודם אחת מאפשרויות התיקון (🛠️) למעלה' 
+                                                        : 'הטמעת Human-Protocol Patch 🚀'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* FINAL SUMMARY & CERTIFICATE CARD */}
+                    {gameState === 'FINAL_SUMMARY' && (
+                        <div className="flex-1 flex flex-col items-center justify-center py-6">
+                            
+                            {/* CERTIFICATE DISPLAY CONTAINER */}
+                            <div className="certificate-container bg-slate-900 border-2 border-cyber-cyan/60 rounded-2xl p-6 sm:p-10 max-w-3xl w-full shadow-2xl relative overflow-hidden text-center glow-cyan">
+                                
+                                <div className="absolute top-0 right-0 w-full h-2 bg-gradient-to-r from-cyber-cyan via-cyber-purple to-cyber-green"></div>
+
+                                <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+                                    <div className="text-right">
+                                        <div className="text-xs font-mono text-cyber-cyan">CYBER INCIDENT RESPONSE AGENCY</div>
+                                        <div className="text-lg font-bold text-white">תעודת הסמכה: אנליסט בכיר לגורם אנושי בסייבר</div>
+                                    </div>
+                                    <div className="text-4xl">🏆</div>
+                                </div>
+
+                                <p className="text-slate-400 text-sm mb-2">מזל טוב! פענחת בהצלחה את כל 10 השכבות של השרת:</p>
+                                
+                                <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyber-cyan via-white to-cyber-purple mb-6">
+                                    {studentName || "תלמיד/ת סייבר מצטיין/ת"}
+                                </h2>
+
+                                <p className="text-slate-300 text-sm max-w-xl mx-auto mb-8 leading-relaxed">
+                                    הפגנת שליטה מופלאה בחיבור בין אבטחת סייבר מתקדמת להנדסת אנוש! פיענחת בהצלחה את מנועי מפג"ש (<strong className="text-cyber-cyan">בחירה, מסוגלות ושייכות</strong>), הטמעת <strong className="text-cyber-purple">בטיחות פסיכולוגית</strong>, מנעת שחיקה, גישרת על קונפליקטים וחתמת על אמנת הפרוטוקול האנושי.
+                                </p>
+
+                                {/* SCORE METRICS CARD GRID */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 text-center">
+                                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                                        <div className="text-[10px] text-slate-400">ציון סופי</div>
+                                        <div className="text-2xl font-bold text-cyber-green font-mono">{score}/100</div>
+                                    </div>
+                                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                                        <div className="text-[10px] text-slate-400">זמן פתרון</div>
+                                        <div className="text-2xl font-bold text-cyber-cyan font-mono">{formatTime(elapsedSeconds)}</div>
+                                    </div>
+                                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                                        <div className="text-[10px] text-slate-400">שכבות שפוענחו</div>
+                                        <div className="text-2xl font-bold text-cyber-purple font-mono">10 / 10</div>
+                                    </div>
+                                    <div className="bg-slate-950 p-[10px] rounded-xl border border-slate-800">
+                                        <div className="text-[10px] text-slate-400">סטטוס שרת</div>
+                                        <div className="text-xs font-bold text-emerald-400 font-mono mt-1">FULLY SECURED</div>
+                                    </div>
+                                </div>
+
+                                {/* ACTION BUTTONS */}
+                                <div className="no-print flex flex-col sm:flex-row gap-4 justify-center">
+                                    <button 
+                                        onClick={() => window.print()}
+                                        className="bg-gradient-to-r from-cyber-cyan to-cyber-purple text-slate-950 font-bold px-6 py-3 rounded-xl transition shadow-lg hover:opacity-90 flex items-center justify-center gap-2"
+                                    >
+                                        <span>🖨️</span> הדפס / שמור תעודה כ-PDF
+                                    </button>
+                                    <button 
+                                        onClick={() => window.location.reload()}
+                                        className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-6 py-3 rounded-xl transition border border-slate-700 flex items-center justify-center gap-2"
+                                    >
+                                        <span>🔄</span> משחק חדש
+                                    </button>
+                                </div>
+
+                                <div className="mt-8 text-[10px] text-slate-500 font-mono">
+                                    VERIFIED HASH: 0x10_LAYERS_MASTER_KEY_CYBER_SEL
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+            );
+        }
+
+        // Render React App
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
